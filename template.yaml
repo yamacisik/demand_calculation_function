@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  python3.9
+
+  Aerology SAM template for capacity prediction:
+  - calculate past capacity values and push them to influxDB on schedule
+  - calculate runaway predictions and push them to influxDB on schedule
+  - trigger ML predictions of capacity from inputs on schedule
+  Currently this template does not contain the ingestion of jms messages, and assumes that they are accessible on S3
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 300
+
+Resources:
+  # Dynamo DB Resources, persistence resources used for storing live status
+
+  # CalculateDemandFunction: loop over the current flights in the dynamoDB
+  # create demand prediction based on the valid messages, and push them to influxDB
+  CalculateDemandTest:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: ActiveFlightsStaging
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - Version: '2012-10-17' # Policy Document
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:*
+              Resource:
+                - arn:aws:dynamodb:us-east-1:984418688871:table/ActiveFlightsStaging
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: cron(04 * * * ? *)  # every xx:04 once an hour
+            Enabled: True
+      VpcConfig:
+        SubnetIds:
+          - subnet-0e6edb09eba2a00b4
+        SecurityGroupIds:
+          - sg-000295892700f1961
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./lambda_calculate_demand
+      DockerTag: lambda_calculate_demand_test
+  CalculateDemandTestLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${CalculateDemandTest}"
+      RetentionInDays: 14
+

@@ -1,0 +1,14 @@
+{
+  "influx": {
+    "url": "http://ec2-54-227-54-215.compute-1.amazonaws.com:8086",
+    "token": "token",
+    "org": "aerology"
+  },
+  "airports": [
+    {
+      "short_name": "EWR",
+      "influx_bucket": "aerology.test",
+      "lane_names": ["runway_04L", "runway_04R", "runway_11"]
+    }
+  ]
+}
